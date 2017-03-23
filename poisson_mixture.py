@@ -15,7 +15,7 @@ class PoissonMixtureSampler:
             if u <= self.w[i]:
                 return numpy.random.poisson(self.param[i])
             else:
-                u -= w[i]
+                u -= self.w[i]
 
 def poisson_mixture_online_em(n, gamma_0, alpha, sampler):
     assert gamma_0 > 0 and gamma_0 < 1 and alpha > 0.5 and alpha <= 1
