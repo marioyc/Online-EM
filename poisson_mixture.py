@@ -17,7 +17,7 @@ class PoissonMixtureSampler:
             else:
                 u -= self.w[i]
 
-def poisson_mixture_online_em(n, gamma_0, alpha, sampler):
+def poisson_mixture_online_em(n, gamma_0, alpha, sampler, averaging=False, n0=None):
     assert gamma_0 > 0 and gamma_0 < 1 and alpha > 0.5 and alpha <= 1
 
     m = sampler.m
@@ -30,6 +30,9 @@ def poisson_mixture_online_em(n, gamma_0, alpha, sampler):
     s[:, 0] = 1.0 / m
     s[:, 1] = numpy.arange(1, m + 1)
     s_temp = numpy.zeros((m, 2))
+
+    if averaging and n0 is None:
+        n0 = n / 2
 
     for i in range(n):
         y = sampler.sample()
@@ -45,10 +48,15 @@ def poisson_mixture_online_em(n, gamma_0, alpha, sampler):
 
         w = s[:, 0]
         param = s[:, 1] / s[:, 0]
-        w_seq[i, :] = w
-        param_seq[i, :] = param
 
-    print(w, param)
+        if averaging and i > n0:
+            w_seq[i, :] = (w_seq[i - 1, :] * (i - n0 + 1) + w) / (i - n0 + 2)
+            param_seq[i, :] = (param_seq[i - 1, :] * (i - n0 + 1) + param) / (i - n0 + 2)
+        else:
+            w_seq[i, :] = w
+            param_seq[i, :] = param
+
+    print(w_seq[-1, :], param_seq[-1, :])
     return w_seq, param_seq
 
 w = [1.0 / 6, 1.0 / 3, 1.0 / 2]
@@ -59,15 +67,21 @@ sampler = PoissonMixtureSampler(w, param)
 
 w_seq, param_seq = poisson_mixture_online_em(10000, 0.5, 1, sampler)
 w_seq2, param_seq2 = poisson_mixture_online_em(10000, 0.5, 0.6, sampler)
+w_seq3, param_seq3 = poisson_mixture_online_em(10000, 0.5, 0.6, sampler, averaging=True)
 
 f, axarr = plt.subplots(sampler.m, 2, sharex=True)
 
 for i in range(sampler.m):
+    axarr[i, 0].set_title(r'$w_{}$ = {:.5f}'.format(i + 1, w[i]))
     axarr[i, 0].plot(w_seq[:, i], label=r'$\alpha = 1$')
     axarr[i, 0].plot(w_seq2[:, i], label=r'$\alpha = 0.6$')
+    axarr[i, 0].plot(w_seq3[:, i], label=r'$\alpha = 0.6$, averaging')
     legend1 = axarr[i, 0].legend()
+
+    axarr[i, 1].set_title(r'$\lambda_{}$ = {:.5f}'.format(i + 1, param[i]))
     axarr[i, 1].plot(param_seq[:, i], label=r'$\alpha = 1$')
     axarr[i, 1].plot(param_seq2[:, i], label=r'$\alpha = 0.6$')
+    axarr[i, 1].plot(param_seq3[:, i], label=r'$\alpha = 0.6$, averaging')
     legend2 = axarr[i, 1].legend()
 
 plt.show()
