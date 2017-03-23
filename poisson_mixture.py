@@ -17,7 +17,9 @@ class PoissonMixtureSampler:
             else:
                 u -= w[i]
 
-def poisson_mixture_online_em(n, gamma_0, sampler):
+def poisson_mixture_online_em(n, gamma_0, alpha, sampler):
+    assert gamma_0 > 0 and gamma_0 < 1 and alpha > 0.5 and alpha <= 1
+
     m = sampler.m
     w_seq = numpy.zeros((n, m))
     w = numpy.ones(m) / m
@@ -31,7 +33,7 @@ def poisson_mixture_online_em(n, gamma_0, sampler):
 
     for i in range(n):
         y = sampler.sample()
-        gamma = gamma_0 / (i + 1)
+        gamma = gamma_0 / (i + 1) ** alpha
 
         for j in range(m):
             w_i[j] = w[j] * param[j]**y * numpy.exp(-param[j])
@@ -51,14 +53,21 @@ def poisson_mixture_online_em(n, gamma_0, sampler):
 
 w = [1.0 / 6, 1.0 / 3, 1.0 / 2]
 param = [2.5, 5, 10]
+#w = [1.0 / 3, 2.0 / 3]
+#param = [2, 3]
 sampler = PoissonMixtureSampler(w, param)
 
-w_seq, param_seq = poisson_mixture_online_em(1000, 0.5, sampler)
+w_seq, param_seq = poisson_mixture_online_em(10000, 0.5, 1, sampler)
+w_seq2, param_seq2 = poisson_mixture_online_em(10000, 0.5, 0.6, sampler)
 
 f, axarr = plt.subplots(sampler.m, 2, sharex=True)
 
 for i in range(sampler.m):
-    axarr[i, 0].plot(w_seq[:, i])
-    axarr[i, 1].plot(param_seq[:, i])
+    axarr[i, 0].plot(w_seq[:, i], label=r'$\alpha = 1$')
+    axarr[i, 0].plot(w_seq2[:, i], label=r'$\alpha = 0.6$')
+    legend1 = axarr[i, 0].legend()
+    axarr[i, 1].plot(param_seq[:, i], label=r'$\alpha = 1$')
+    axarr[i, 1].plot(param_seq2[:, i], label=r'$\alpha = 0.6$')
+    legend2 = axarr[i, 1].legend()
 
 plt.show()
